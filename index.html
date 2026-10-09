@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fake Artist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=Permanent+Marker&display=swap">
+<style>
+/* Layout: one narrow column — the dealt card on top, host controls, then the table of players. */
+:root {
+  --bg: #E7EBF2;
+  --surface: #FFFFFF;
+  --ink: #151B33;
+  --muted: #5A6381;
+  --line: #CCD3E2;
+  --rule: #DCE6F7;
+  --accent: #2C47D4;
+  --accent-ink: #FFFFFF;
+  --fake: #CF2338;
+  --ok: #1F8A4C;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-marker: "Permanent Marker", "Marker Felt", "Comic Sans MS", cursive;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E1222; --surface: #191F35; --ink: #E8ECF8; --muted: #9AA3C0;
+    --line: #2C3454; --rule: #232B47; --accent: #7F95FF; --accent-ink: #0E1222; --fake: #FF5C70; --ok: #4CC983;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+[hidden] { display: none !important; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 28px 16px 48px; display: flex; flex-direction: column; gap: 20px; }
+
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: 28px; letter-spacing: -0.02em; margin: 0; }
+.meta { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 600; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.dot.on { background: var(--ok); }
+.label { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+/* Panels */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+.panel h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+.panel p { margin: 0; color: var(--muted); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row > input { flex: 1 1 180px; min-width: 0; }
+.or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+input[type="text"] { font: inherit; font-size: 16px; padding: 11px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+input[type="text"]:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+input.code { text-transform: uppercase; letter-spacing: 0.12em; font-weight: 600; }
+
+/* The dealt card: an index card with ruled lines */
+.card {
+  position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  padding: 22px 22px 26px; min-height: 260px; display: flex; flex-direction: column; gap: 14px;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 31px, var(--rule) 31px, var(--rule) 32px);
+  background-position: 0 70px;
+  box-shadow: 0 1px 0 var(--line), 0 10px 30px -18px rgba(20, 27, 51, 0.35);
+}
+.card.deal { animation: deal 360ms cubic-bezier(.2,.8,.3,1); }
+@keyframes deal { from { transform: translateY(10px) rotate(-1.5deg); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .card.deal { animation: none; } }
+.cat { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -0.01em; margin: 2px 0 0; }
+.word-zone { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; border-top: 2px solid var(--ink); padding-top: 14px; }
+.word { font-family: var(--font-marker); font-size: clamp(40px, 12vw, 64px); line-height: 1.05; color: var(--accent); overflow-wrap: anywhere; }
+.stamp {
+  font-family: var(--font-marker); font-size: clamp(48px, 14vw, 76px); line-height: 1; color: var(--fake);
+  border: 5px solid var(--fake); border-radius: 10px; padding: 6px 18px 2px; transform: rotate(-6deg); margin: 8px 0 4px 6px;
+}
+.hint { color: var(--muted); font-size: 14px; margin: 0; max-width: 42ch; }
+.blurred .word-zone > :not(.label) { filter: blur(14px); user-select: none; }
+.card-actions { position: absolute; top: 16px; right: 16px; }
+.waiting { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 12px; }
+.waiting h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; margin: 0; text-wrap: balance; }
+
+.reveal { background: var(--surface); border: 2px dashed var(--fake); border-radius: 12px; padding: 14px 16px; }
+.reveal p { margin: 0; }
+.reveal strong { color: var(--fake); }
+
+/* Buttons */
+button { font: inherit; cursor: pointer; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 9px 14px; font-weight: 600; }
+button:hover { border-color: var(--muted); }
+button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+button.primary:hover { filter: brightness(1.08); }
+button.big { font-size: 17px; padding: 13px 22px; }
+button.small { font-size: 13px; padding: 5px 10px; }
+button.ghost { background: transparent; }
+button.link { background: none; border: none; padding: 0; color: var(--muted); font-weight: 500; text-decoration: underline; text-underline-offset: 3px; font-size: 13px; }
+
+/* Host panel */
+.host { border: 1px solid var(--line); border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.host-note { color: var(--muted); font-size: 13px; margin: 0; }
+.invite { display: flex; gap: 8px; }
+.invite input { flex: 1; min-width: 0; font-size: 13px; padding: 7px 10px; }
+
+/* Players */
+.players { display: flex; flex-direction: column; gap: 10px; }
+.players-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
+ul.list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+ul.list li { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px 4px; min-width: 0; }
+ul.list li.away { opacity: .55; }
+.av { width: 28px; height: 28px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; }
+ul.list .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+ul.list .tag { font-size: 11px; color: var(--muted); white-space: nowrap; }
+ul.list button.x { border: none; background: transparent; color: var(--muted); padding: 2px 8px; font-size: 16px; line-height: 1; }
+.empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+.status { min-height: 1.4em; font-size: 13px; color: var(--muted); margin: 0; }
+.status.err { color: var(--fake); }
+footer { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
+.rules { font-size: 13px; color: var(--muted); margin: 0; }
+.rules summary { cursor: pointer; font-weight: 600; }
+.rules ol { padding-left: 20px; margin: 8px 0 0; display: grid; gap: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Fake Artist</h1>
+    <div class="meta">
+      <span id="roomTag" hidden></span>
+      <span id="conn" hidden><span class="dot" id="connDot"></span><span id="connText"></span></span>
+    </div>
+  </header>
+
+  <!-- No room yet: start one or join by code -->
+  <section class="panel" id="landing" hidden>
+    <h2>Start a game for your team</h2>
+    <p>You'll get a link to send everyone. They type their name and they're in.</p>
+    <div><button class="primary big" id="startBtn">Start a new game</button></div>
+    <div class="or">or join one</div>
+    <form class="row" id="codeForm">
+      <input type="text" class="code" id="codeInput" placeholder="Game code" autocomplete="off" maxlength="8" aria-label="Game code">
+      <button type="submit">Join</button>
+    </form>
+  </section>
+
+  <!-- Name entry -->
+  <section class="panel" id="namePanel" hidden>
+    <h2 id="nameTitle">What's your name?</h2>
+    <p id="nameSub">This is how the others will see you.</p>
+    <form class="row" id="nameForm">
+      <input type="text" id="nameInput" placeholder="Your name" autocomplete="given-name" maxlength="24" aria-label="Your name">
+      <button type="submit" class="primary">Take a seat</button>
+    </form>
+  </section>
+
+  <!-- The table -->
+  <div id="table" hidden style="display:flex;flex-direction:column;gap:20px">
+    <div id="reveal" class="reveal" hidden></div>
+
+    <section class="card" id="card" aria-live="polite"></section>
+
+    <section class="host" id="host" hidden>
+      <span class="label">Host controls</span>
+      <div class="row">
+        <button class="primary big" id="nextBtn">Next Game</button>
+        <button id="revealBtn">Reveal the fake</button>
+      </div>
+      <p class="host-note" id="hostNote"></p>
+      <span class="label">Invite link</span>
+      <div class="invite">
+        <input type="text" id="inviteInput" readonly aria-label="Invite link">
+        <button class="small" id="copyBtn">Copy</button>
+      </div>
+    </section>
+
+    <section class="players">
+      <div class="players-head">
+        <span class="label">At the table</span>
+        <span class="count" id="count"></span>
+      </div>
+      <ul class="list" id="list"></ul>
+      <p class="empty" id="emptyList" hidden>Nobody is seated yet.</p>
+    </section>
+
+    <p class="status" id="status" role="status"></p>
+
+    <footer>
+      <button class="link" id="renameBtn">Change my name</button>
+      <button class="link" id="leaveBtn">Leave the table</button>
+      <button class="link" id="takeoverBtn">Become the host</button>
+    </footer>
+
+    <details class="rules">
+      <summary>How a round works</summary>
+      <ol>
+        <li>The host clicks Next Game. Everyone sees the same category. Everyone sees the same word, except one player who sees FAKE.</li>
+        <li>On Zoom, take turns adding one line each to a shared drawing of the word. The fake bluffs.</li>
+        <li>Vote on who the fake is. The host clicks Reveal to show the answer and the word.</li>
+        <li>Next Game deals a new word and a new fake. Last round's fake is never picked twice in a row.</li>
+      </ol>
+    </details>
+  </div>
+</div>
+
+<script src="mqtt.min.js"></script>
+<script>
+const BROKER = "wss://broker.emqx.io:8084/mqtt";
+const PREFIX = "ultra-fakeartist/v1/";
+
+const WORDS = {
+  "Animal": ["Cat","Elephant","Giraffe","Octopus","Penguin","Kangaroo","Snail","Owl","Shark","Turtle","Peacock","Camel"],
+  "Food": ["Pizza","Taco","Pancakes","Sushi","Hot Dog","Burger","Pretzel","Spaghetti","Popcorn","Croissant","Birthday Cake","Ice Cream Cone"],
+  "Fruit": ["Banana","Pineapple","Watermelon","Strawberry","Cherries","Grapes","Coconut","Lemon","Pear","Avocado"],
+  "Vehicle": ["Bicycle","Helicopter","Submarine","Tractor","Hot Air Balloon","Skateboard","Fire Truck","Sailboat","Rocket","Train","Motorcycle","Canoe"],
+  "Sport": ["Basketball","Golf","Surfing","Bowling","Tennis","Skiing","Boxing","Archery","Baseball","Hockey","Fencing","Swimming"],
+  "Musical Instrument": ["Guitar","Piano","Drums","Violin","Trumpet","Harp","Saxophone","Accordion","Xylophone","Banjo","Tuba","Bagpipes"],
+  "Household Object": ["Toaster","Umbrella","Lamp","Scissors","Toothbrush","Clock","Kettle","Ladder","Bathtub","Sofa","Broom","Key"],
+  "Job": ["Firefighter","Chef","Pilot","Doctor","Astronaut","Magician","Farmer","Painter","Lifeguard","Plumber","Dentist","Detective"],
+  "Place": ["Beach","Castle","Volcano","Lighthouse","Library","Airport","Desert Island","Zoo","Pyramid","Igloo","Haunted House","Waterfall"],
+  "Clothing": ["Top Hat","Sneaker","Sunglasses","Scarf","Necktie","Mitten","Crown","Raincoat","Cowboy Boot","Bow Tie","Backpack","Tuxedo"],
+  "Nature": ["Rainbow","Tornado","Lightning","Snowman","Cactus","Mushroom","Moon","Palm Tree","Cloud","Sunflower","Iceberg","Campfire"],
+  "Fantasy Character": ["Superhero","Robot","Mermaid","Dragon","Unicorn","Vampire","Ghost","Wizard","Alien","Zombie","Ninja","Pirate"],
+  "At the Office": ["Stapler","Coffee Mug","Laptop","Paper Clip","Calendar","Whiteboard","Headphones","Sticky Note","Desk Chair","Microphone","Printer","Envelope"]
+};
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+const params = new URLSearchParams(location.search);
+
+// Storage namespace; ?p=2 gives a second identity in the same browser for testing
+const NS = "fa" + (params.get("p") ? ":" + params.get("p").replace(/[^a-z0-9]/gi, "") : "") + ":";
+const store = {
+  get(k) { try { return localStorage.getItem(NS + k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(NS + k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(NS + k); } catch (e) {} },
+};
+const randId = (n) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, "0")).join("");
+const newCode = () => { const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => A[b % A.length]).join(""); };
+const cleanCode = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 8);
+
+const me = { id: store.get("id") || randId(8), name: store.get("name") || "" };
+store.set("id", me.id);
+
+let room = cleanCode(params.get("room"));
+let base = "";
+let client = null, connected = false, everConnected = false;
+let players = new Map();   // id -> {id, name, joinedAt}
+let presence = new Map();  // id -> "1" | "0"
+let game = null, myCard = null;
+let hidden = false, lastRoundShown = null, pendingHostInit = false, takeoverArmed = false;
+
+const seatedKey = () => "seated:" + room;
+const hostKey = () => "host:" + room;
+const hostState = () => { try { return JSON.parse(store.get(hostKey()) || "{}"); } catch (e) { return {}; } };
+const isHost = () => game ? game.hostId === me.id : store.get("hosting:" + room) === "1";
+const isSeated = () => players.has(me.id);
+const inviteUrl = () => location.origin + location.pathname + "?room=" + room;
+
+function setStatus(msg, isErr) { const s = $("status"); s.textContent = msg || ""; s.classList.toggle("err", !!isErr); }
+
+function show(view) {
+  for (const v of ["landing", "namePanel", "table"]) $(v).hidden = v !== view;
+}
+
+// ---- Entry flow ----
+
+function init() {
+  if (!room) { show("landing"); return; }
+  $("roomTag").hidden = false; $("roomTag").textContent = "Game " + room;
+  if (!me.name) { askName(false); return; }
+  enterRoom();
+}
+
+function askName(renaming) {
+  show("namePanel");
+  $("nameTitle").textContent = renaming ? "Change your name" : "What's your name?";
+  $("nameInput").value = me.name;
+  $("nameInput").focus();
+}
+
+$("startBtn").onclick = () => {
+  room = newCode();
+  history.replaceState(null, "", "?room=" + room + (params.get("p") ? "&p=" + params.get("p") : ""));
+  store.set("hosting:" + room, "1");
+  pendingHostInit = true;
+  init();
+};
+
+$("codeForm").onsubmit = (e) => {
+  e.preventDefault();
+  const c = cleanCode($("codeInput").value);
+  if (c.length < 4) { $("codeInput").focus(); return; }
+  room = c;
+  history.replaceState(null, "", "?room=" + room + (params.get("p") ? "&p=" + params.get("p") : ""));
+  init();
+};
+
+$("nameForm").onsubmit = (e) => {
+  e.preventDefault();
+  const n = $("nameInput").value.trim().replace(/\s+/g, " ").slice(0, 24);
+  if (!n) { $("nameInput").focus(); return; }
+  me.name = n; store.set("name", n);
+  store.set(seatedKey(), "1");
+  if (client) { show("table"); publishSeat(); render(); } else enterRoom();
+};
+
+function enterRoom() {
+  base = PREFIX + room + "/";
+  if (store.get(seatedKey()) !== "0") store.set(seatedKey(), "1");
+  show("table");
+  render();
+  connect();
+}
+
+// ---- Realtime ----
+
+function connect() {
+  client = mqtt.connect(BROKER, {
+    clientId: "fa_" + me.id + "_" + randId(3),
+    clean: true, keepalive: 20, reconnectPeriod: 2000, connectTimeout: 10000,
+    will: { topic: base + "presence/" + me.id, payload: "0", qos: 1, retain: true },
+  });
+  client.on("connect", () => {
+    connected = true; everConnected = true;
+    client.subscribe([base + "players/+", base + "presence/+", base + "game", base + "card/" + me.id], { qos: 1 });
+    pub("presence/" + me.id, "1");
+    if (store.get(seatedKey()) === "1") publishSeat();
+    if (pendingHostInit) {
+      pendingHostInit = false;
+      pub("game", { round: 0, hostId: me.id, category: null, playerIds: [], reveal: null });
+    }
+    setStatus("");
+    render();
+  });
+  client.on("close", () => { if (connected) { connected = false; render(); } });
+  client.on("error", () => {});
+  client.on("message", onMessage);
+}
+
+function pub(sub, data) {
+  if (!client) return;
+  const payload = data == null ? "" : typeof data === "string" ? data : JSON.stringify(data);
+  client.publish(base + sub, payload, { qos: 1, retain: true });
+}
+
+function parse(buf) { if (!buf || !buf.length) return null; try { return JSON.parse(buf.toString()); } catch (e) { return undefined; } }
+
+function onMessage(topic, buf) {
+  const sub = topic.slice(base.length);
+  if (sub === "game") {
+    const g = parse(buf); if (g === undefined) return;
+    game = g;
+  } else if (sub.startsWith("players/")) {
+    const id = sub.slice(8), p = parse(buf);
+    if (p === undefined) return;
+    if (p && typeof p.name === "string") players.set(id, { id, name: p.name.slice(0, 24), joinedAt: +p.joinedAt || 0 });
+    else {
+      players.delete(id);
+      if (id === me.id && store.get(seatedKey()) === "1") {
+        store.set(seatedKey(), "0");
+        setStatus("The host removed you from the table.");
+      }
+    }
+  } else if (sub.startsWith("presence/")) {
+    presence.set(sub.slice(9), buf.toString());
+  } else if (sub === "card/" + me.id) {
+    const c = parse(buf); if (c === undefined) return;
+    myCard = c;
+  }
+  render();
+}
+
+function publishSeat() {
+  const existing = players.get(me.id);
+  pub("players/" + me.id, { name: me.name, joinedAt: existing ? existing.joinedAt : Date.now() });
+}
+
+// ---- Rendering ----
+
+function colorFor(id) { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) % 360; return "hsl(" + h + " 55% 45%)"; }
+const nameOf = (id) => (players.get(id) || {}).name || (id === me.id ? me.name || "You" : "Someone who left");
+const seatedList = () => [...players.values()].sort((a, b) => a.joinedAt - b.joinedAt || a.id.localeCompare(b.id));
+
+function render() {
+  if ($("table").hidden) return;
+  // Header connection state
+  $("conn").hidden = false;
+  $("connDot").classList.toggle("on", connected);
+  $("connText").textContent = connected ? (game && game.round ? "Round " + game.round : "Connected") : everConnected ? "Reconnecting…" : "Connecting…";
+
+  renderReveal();
+  renderCard();
+  renderHost();
+  renderPlayers();
+  $("leaveBtn").hidden = !isSeated();
+  $("takeoverBtn").hidden = isHost() || !connected;
+  $("takeoverBtn").textContent = takeoverArmed ? "Click again to take over hosting" : "Become the host";
+}
+
+function renderReveal() {
+  const r = $("reveal");
+  if (!game || !game.reveal) { r.hidden = true; return; }
+  r.hidden = false; r.replaceChildren();
+  const p = el("p"), mine = game.reveal.fakeId === me.id;
+  p.append(el("strong", null, mine ? "You" : nameOf(game.reveal.fakeId)),
+    document.createTextNode(mine ? " were the fake. The word was " : " was the fake. The word was "),
+    el("strong", null, String(game.reveal.word)), document.createTextNode("."));
+  r.append(p);
+}
+
+function waiting(label, heading, hint, action) {
+  const w = el("div", "waiting");
+  w.append(el("span", "label", label), el("h2", null, heading));
+  if (hint) w.append(el("p", "hint", hint));
+  if (action) w.append(action);
+  return w;
+}
+
+function renderCard() {
+  const c = $("card");
+  c.classList.remove("blurred");
+  c.replaceChildren();
+  if (!everConnected) { c.append(waiting("Connecting", "Finding the table…")); return; }
+  if (!isSeated()) {
+    const b = el("button", "primary big", "Take a seat as " + me.name);
+    b.onclick = () => { store.set(seatedKey(), "1"); publishSeat(); };
+    c.append(waiting("Not seated", "You're watching.", null, b));
+    return;
+  }
+  const round = game ? game.round || 0 : 0;
+  const hostName = game && game.hostId ? (game.hostId === me.id ? "you" : nameOf(game.hostId)) : "the host";
+  if (!round) { c.append(waiting("Seated", "Waiting for " + hostName + " to deal the first game.")); return; }
+  if (!(game.playerIds || []).includes(me.id)) {
+    c.append(waiting("Round " + round, "This round was dealt before you sat down.", "You'll get a card on the next game.")); return;
+  }
+  if (!myCard || myCard.round !== round) { c.append(waiting("Round " + round, "Dealing…")); return; }
+
+  const head = el("div");
+  head.append(el("span", "label", "Category"), el("p", "cat", String(myCard.category)));
+  const zone = el("div", "word-zone");
+  if (myCard.fake) {
+    zone.append(el("span", "label", "Your word"), el("div", "stamp", "FAKE"),
+      el("p", "hint", "You don't know the word. Watch the others draw and bluff your line."));
+  } else {
+    zone.append(el("span", "label", "Your word"), el("div", "word", String(myCard.word)));
+  }
+  const actions = el("div", "card-actions");
+  const hb = el("button", "small ghost", hidden ? "Show card" : "Hide card");
+  hb.onclick = () => { hidden = !hidden; renderCard(); };
+  actions.append(hb);
+  c.append(actions, head, zone);
+  if (hidden) c.classList.add("blurred");
+  if (lastRoundShown !== round) {
+    lastRoundShown = round;
+    c.classList.remove("deal"); void c.offsetWidth; c.classList.add("deal");
+  }
+}
+
+function renderHost() {
+  const host = isHost();
+  $("host").hidden = !host;
+  if (!host) return;
+  const list = seatedList(), n = list.length;
+  const away = list.filter((p) => presence.get(p.id) === "0").length;
+  $("nextBtn").disabled = !connected || n < 2;
+  $("revealBtn").disabled = !connected || !game || !game.round || !!game.reveal || hostState().round !== game.round;
+  let note;
+  if (n < 2) note = "Send the invite link below. You need at least 2 seated players to deal.";
+  else if (n < 3) note = "Dealing works with 2, but the game is better with 3 or more.";
+  else note = "Next Game deals to the " + n + " players seated now. Last round's fake won't be picked again.";
+  if (away) note += " " + away + (away === 1 ? " player looks" : " players look") + " offline. Remove them with × if they've left.";
+  $("hostNote").textContent = note;
+  if ($("inviteInput").value !== inviteUrl()) $("inviteInput").value = inviteUrl();
+}
+
+function renderPlayers() {
+  const list = seatedList();
+  $("count").textContent = list.length + (list.length === 1 ? " player" : " players") + " · up to 10";
+  const ul = $("list"); ul.replaceChildren();
+  $("emptyList").hidden = list.length > 0;
+  for (const p of list) {
+    const away = presence.get(p.id) === "0";
+    const li = el("li", away ? "away" : null);
+    const av = el("span", "av", (p.name.trim()[0] || "?").toUpperCase());
+    av.style.background = colorFor(p.id);
+    li.append(av, el("span", "nm", p.name));
+    if (p.id === me.id) li.append(el("span", "tag", "you"));
+    else if (game && game.hostId === p.id) li.append(el("span", "tag", "host"));
+    else if (away) li.append(el("span", "tag", "offline"));
+    if (isHost() && p.id !== me.id) {
+      const x = el("button", "x", "×");
+      x.title = "Remove from table"; x.setAttribute("aria-label", "Remove " + p.name);
+      x.onclick = () => pub("players/" + p.id, null);
+      li.append(x);
+    }
+    ul.append(li);
+  }
+}
+
+// ---- Host actions ----
+
+function nextGame() {
+  const ids = seatedList().map((p) => p.id);
+  if (ids.length < 2 || !connected) return;
+  const h = hostState();
+
+  // A new fake, never the same person twice in a row
+  let pool = ids.filter((id) => id !== h.lastFakeId);
+  if (!pool.length) pool = ids;
+  const fakeId = pick(pool);
+
+  // A word that hasn't come up recently
+  const all = Object.entries(WORDS).flatMap(([category, words]) => words.map((word) => ({ category, word, key: category + "|" + word })));
+  let used = Array.isArray(h.usedWords) ? h.usedWords : [];
+  let fresh = all.filter((w) => !used.includes(w.key));
+  if (!fresh.length) { used = []; fresh = all; }
+  const { category, word, key } = pick(fresh);
+  const round = ((game && game.round) || 0) + 1;
+
+  for (const id of ids) pub("card/" + id, { round, category, word: id === fakeId ? null : word, fake: id === fakeId });
+  store.set(hostKey(), JSON.stringify({ round, fakeId, lastFakeId: fakeId, word, usedWords: [...used, key].slice(-100) }));
+  pub("game", { round, category, playerIds: ids, hostId: me.id, reveal: null, dealtAt: Date.now() });
+  setStatus("Round " + round + " dealt to " + ids.length + " players.");
+}
+
+function revealFake() {
+  const h = hostState();
+  if (!game || h.round !== game.round) { setStatus("This device doesn't have this round's answer.", true); return; }
+  pub("game", { ...game, reveal: { fakeId: h.fakeId, word: h.word } });
+}
+
+$("nextBtn").onclick = nextGame;
+$("revealBtn").onclick = revealFake;
+$("copyBtn").onclick = async () => {
+  try { await navigator.clipboard.writeText(inviteUrl()); $("copyBtn").textContent = "Copied"; setTimeout(() => ($("copyBtn").textContent = "Copy"), 1500); }
+  catch (e) { $("inviteInput").select(); }
+};
+$("renameBtn").onclick = () => askName(true);
+$("leaveBtn").onclick = () => { store.set(seatedKey(), "0"); pub("players/" + me.id, null); };
+$("takeoverBtn").onclick = () => {
+  if (!takeoverArmed) { takeoverArmed = true; render(); setTimeout(() => { takeoverArmed = false; render(); }, 4000); return; }
+  takeoverArmed = false;
+  store.set("hosting:" + room, "1");
+  pub("game", { ...(game || { round: 0, category: null, playerIds: [] }), hostId: me.id });
+  setStatus("You're the host now.");
+};
+
+init();
+</script>
+</body>
+</html>
